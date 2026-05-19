@@ -106,7 +106,10 @@ def render_resource_optimization():
         
         for index, row in utilization.iterrows():
             st.write(f"**{row['ward'].capitalize()} Ward** ({int(row['active_patients'])}/{int(row['total_beds'])} beds)")
-            st.progress(row['utilization_pct'] / 100.0)
+            progress_val = min(row['utilization_pct'] / 100.0, 1.0)
+            st.progress(progress_val)
+            if row['utilization_pct'] > 100:
+                st.error(f"Overcapacity Warning: {row['ward'].capitalize()} Ward is over capacity!")
             
         st.markdown("---")
         st.subheader("Predict Patient Length of Stay")
