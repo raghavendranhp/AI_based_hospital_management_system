@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+hms_env/
+__init__.py
+.env
+!models/
+!data/raw/
+.env
