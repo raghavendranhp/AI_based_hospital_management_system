@@ -36,13 +36,13 @@ def render_predictive_analytics():
     """
     st.header("Predictive Analytics")
     
+    if not os.path.exists("models/no_show_rf.pkl"):
+        st.error("pre-trained model not found. please run the training script.")
+        return
+        
     try:
         appointments_df = pd.read_csv("data/raw/appointments.csv")
         predictor = HMSPredictor()
-        
-        st.write("training no-show prediction model...")
-        acc = predictor.train_no_show_model(appointments_df)
-        st.write(f"model trained successfully. accuracy: {acc:.2f}")
         
         st.subheader("Simulate No-Show Prediction")
         departments = appointments_df['department'].unique()
@@ -65,13 +65,13 @@ def render_resource_optimization():
     """
     st.header("Resource Optimization")
     
+    if not os.path.exists("models/occupancy_rf.pkl"):
+        st.error("pre-trained model not found. please run the training script.")
+        return
+        
     try:
         admissions_df = pd.read_csv("data/raw/admissions.csv")
         predictor = HMSPredictor()
-        
-        st.write("training bed occupancy model...")
-        mse = predictor.train_occupancy_model(admissions_df)
-        st.write(f"model trained successfully. mse: {mse:.2f}")
         
         st.subheader("Predict Bed Occupancy Duration")
         wards = admissions_df['ward'].unique()
