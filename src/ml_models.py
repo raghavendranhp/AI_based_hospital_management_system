@@ -1,40 +1,53 @@
 import pandas as pd
-import numpy as np
 import os
 import joblib
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 class HMSPredictor:
     """
-    machine learning predictor for hospital management tasks.
+    enterprise machine learning predictor for hospital management tasks.
     """
 
     def __init__(self, models_dir: str = 'models/'):
         """
-        initializes the models. loads from disk if available.
+        initializes the models and label encoders. loads from disk.
         """
         self.models_dir = models_dir
-        self.no_show_model_path = os.path.join(models_dir, 'no_show_rf.pkl')
-        self.occupancy_model_path = os.path.join(models_dir, 'occupancy_rf.pkl')
         
-        if os.path.exists(self.no_show_model_path):
-            self.no_show_model = joblib.load(self.no_show_model_path)
-        else:
-            self.no_show_model = RandomForestClassifier(n_estimators=100, random_state=42)
-            
-        if os.path.exists(self.occupancy_model_path):
-            self.occupancy_model = joblib.load(self.occupancy_model_path)
-        else:
-            self.occupancy_model = RandomForestRegressor(n_estimators=100, random_state=42)
+        #load models
+        self.no_show_model = joblib.load(os.path.join(models_dir, 'no_show_rf.pkl'))
+        self.occupancy_model = joblib.load(os.path.join(models_dir, 'occupancy_rf.pkl'))
         
-    def predict_no_show(self, input_features: pd.DataFrame):
+        #load encoders
+        self.le_dept = joblib.load(os.path.join(models_dir, 'le_dept.pkl'))
+        self.le_cond = joblib.load(os.path.join(models_dir, 'le_cond.pkl'))
+        self.le_cons = joblib.load(os.path.join(models_dir, 'le_cons.pkl'))
+        self.le_ward = joblib.load(os.path.join(models_dir, 'le_ward.pkl'))
+        self.le_adm = joblib.load(os.path.join(models_dir, 'le_adm.pkl'))
+        
+    def predict_no_show(self, input_data: dict):
         """
-        predicts no-show probability for given appointments.
+        predicts no-show probability for dynamic patient input data.
         """
-        return self.no_show_model.predict(input_features)
+        df = pd.DataFrame([input_data])
+        df['department_code'] = self.le_dept.transform(df['department'])
+        df['chronic_code'] = self.le_cond.transform(df['chronic_condition'])
+        df['consultation_code'] = self.le_cons.transform(df['consultation_type'])
+        
+        features = ['department_code', 'chronic_code', 'consultation_code', 
+                   'wait_time_hours', 'distance_to_hospital_km', 'historical_no_show_rate', 'age']
+        
+        probs = self.no_show_model.predict_proba(df[features])[0]
+        return probs[1]
 
-    def predict_occupancy(self, input_features: pd.DataFrame):
+    def predict_occupancy(self, input_data: dict):
         """
-        predicts occupancy lengths.
+        predicts length of stay based on patient severity and demographics.
         """
-        return self.occupancy_model.predict(input_features)
+        df = pd.DataFrame([input_data])
+        df['ward_code'] = self.le_ward.transform(df['ward'])
+        df['chronic_code'] = self.le_cond.transform(df['chronic_condition'])
+        df['admission_code'] = self.le_adm.transform(df['admission_type'])
+        
+        features = ['ward_code', 'chronic_code', 'admission_code', 'severity_level', 'age']
+        
+        return self.occupancy_model.predict(df[features])[0]
